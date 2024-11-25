@@ -1,92 +1,174 @@
-import React from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from "react";
+import Webcam from "react-webcam";
+import axios from "axios";
 
 function CameraDetail() {
-  const { id } = useParams();
+  const [cleanlinessScore, setCleanlinessScore] = useState(100);
+  const [scoreHistory, setScoreHistory] = useState([]);
+  const [detectedItems, setDetectedItems] = useState({
+    recyclable: [],
+    non_recyclable: [],
+    hazardous: []
+  });
+  const [loading, setLoading] = useState(false);
+  const webcamRef = useRef(null);
+  const intervalRef = useRef(null);
 
-  // Mock camera data
-  const cameraData = {
-    1: {
-      image: 'https://images.unsplash.com/photo-1516464689365-70fcae8ec72c?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTJ8fGdhcmJhZ2UlMjByb2Fkc3xlbnwwfHwwfHx8MA%3D%3D',
-      timestamp: '2024-11-05 10:30 AM',
-      cleanlinessPercentage: '65%',
-      location: 'Zone 1 - North Wing',
-    },
-    2: {
-      image: 'https://media.istockphoto.com/id/513494822/photo/polluted-river-banks.webp?a=1&b=1&s=612x612&w=0&k=20&c=y2pk0_CpjS-xRAcq2HhOwWZiDP6gdAPiH5hMhqwGDvs=',
-      timestamp: '2024-11-05 10:45 AM',
-      cleanlinessPercentage: '75%',
-      location: 'Zone 2 - South Wing',
-    },
-    3: {
-      image: 'https://plus.unsplash.com/premium_photo-1663013360223-019784f42500?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8Z2FyYmFnZSUyMHBvbHV0ZWQlMjByb2Fkc3xlbnwwfHwwfHx8MA%3D%3D',
-      timestamp: '2024-11-05 11:00 AM',
-      cleanlinessPercentage: '85%',
-      location: 'Zone 3 - East Wing',
-    },
-    4: {
-      image: 'https://images.unsplash.com/photo-1495556650867-99590cea3657?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fGdhcmJhZ2UlMjBwb2x1dGVkJTIwcm9hZHN8ZW58MHx8MHx8fDA%3D',
-      timestamp: '2024-11-05 11:15 AM',
-      cleanlinessPercentage: '90%',
-      location: 'Zone 4 - West Wing',
-    },
-    5: {
-      image: 'https://media.istockphoto.com/id/908521560/photo/take-away-fast-food-box-on-pavement.webp?a=1&b=1&s=612x612&w=0&k=20&c=t2e3XLez8yL9L6PVWpAVwMmWWMXzTbHvw7b8B27em3o=',
-      timestamp: '2024-11-05 11:30 AM',
-      cleanlinessPercentage: '80%',
-      location: 'Zone 5 - Central Wing',
-    },
-    6: {
-      image: 'https://media.istockphoto.com/id/1489051648/photo/open-garbage-dust-bin-liter-with-plastic-begs-and-waste-items-at-day-from-different-angle.webp?a=1&b=1&s=612x612&w=0&k=20&c=-NTxJIaQrIjK4-WwxYbh6r2a7W2DPUQeQy0yCf_wnYQ=',
-      timestamp: '2024-11-05 11:45 AM',
-      cleanlinessPercentage: '70%',
-      location: 'Zone 6 - Basement',
-    },
+  // Webcam constraints for better detection
+  const videoConstraints = {
+    width: 640,
+    height: 640,
+    facingMode: "environment"
   };
 
-  const camera = cameraData[id];
+  const processFrame = async () => {
+    if (!webcamRef.current || loading) return;
+
+    const imageSrc = webcamRef.current.getScreenshot();
+    if (!imageSrc) {
+      console.error("Unable to capture webcam frame.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await axios.post("http://localhost:8000/detect", {
+        image: imageSrc
+      });
+
+      const {
+        cleanliness_score,
+        timestamp,
+        detected_items,
+        detected_counts
+      } = response.data;
+
+      // Only update score if there's a significant change
+      setCleanlinessScore(prevScore => {
+        const scoreDiff = Math.abs(prevScore - cleanliness_score);
+        return scoreDiff > 1 ? cleanliness_score : prevScore;
+      });
+      
+      setDetectedItems(detected_items);
+      
+      // Update score history only when items are detected or score changes
+      if (Object.values(detected_counts).some(count => count > 0)) {
+        setScoreHistory(prev => [{
+          score: cleanliness_score,
+          timestamp: timestamp,
+          counts: detected_counts
+        }, ...prev.slice(0, 9)]); // Keep last 10 entries
+      }
+      
+    } catch (error) {
+      console.error("Error detecting waste:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    intervalRef.current = setInterval(processFrame, 1000); // Increased frequency for better detection
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, []);
+
+  const getScoreColor = (score) => {
+    if (score >= 80) return "bg-green-100";
+    if (score >= 60) return "bg-orange-100";
+    return "bg-red-100";
+  };
+
+  const getScoreMessage = (score) => {
+    if (score >= 80) return "Excellent! Area is clean.";
+    if (score >= 60) return "Moderate. Some items need attention.";
+    return "Poor. Immediate cleaning recommended.";
+  };
 
   return (
-    <div className="camera-detail p-6 max-w-2xl mx-auto bg-white rounded-lg shadow-md mt-8">
-      <h2 className="text-2xl font-bold text-green-800 mb-4">Camera {id} Details</h2>
-      <img
-        src={camera.image}
-        alt={`Camera ${id}`}
-        className="w-full h-64 object-cover rounded-md mb-4"
-      />
-      <p className="text-gray-600 mb-2">Timestamp: {camera.timestamp}</p>
-      <p className="text-gray-600 mb-2">Cleanliness: {camera.cleanlinessPercentage}</p>
-      <p className="text-gray-600 mb-4">Location: {camera.location}</p>
-      <button className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg">
-        Send Alert
-      </button>
+    <div className="flex">
+      {/* Main Content */}
+      <div className="w-3/4 p-6">
+        <h2 className="text-2xl font-bold text-green-800 mb-4">Real-time Waste Detection</h2>
+
+        {/* Webcam Display */}
+        <div className="webcam-container mb-4 flex justify-center">
+          <Webcam
+            ref={webcamRef}
+            screenshotFormat="image/jpeg"
+            videoConstraints={videoConstraints}
+            className="h-[640px] w-[640px] object-cover rounded-md"
+          />
+        </div>
+
+        {/* Detected Items Display */}
+        <div className="grid grid-cols-3 gap-4 mt-4">
+          <div className="p-4 rounded-lg bg-yellow-100">
+            <h3 className="font-bold mb-2">Recyclable Items</h3>
+            <ul className="list-disc pl-4">
+              {detectedItems.recyclable.length > 0 
+                ? detectedItems.recyclable.map((item, idx) => (
+                    <li key={idx} className="text-sm">{item}</li>
+                  ))
+                : <li>None detected</li>}
+            </ul>
+          </div>
+          <div className="p-4 rounded-lg bg-blue-100">
+            <h3 className="font-bold mb-2">Non-Recyclable Items</h3>
+            <ul className="list-disc pl-4">
+              {detectedItems.non_recyclable.length > 0 
+                ? detectedItems.non_recyclable.map((item, idx) => (
+                    <li key={idx} className="text-sm">{item}</li>
+                  ))
+                : <li>None detected</li>}
+            </ul>
+          </div>
+          <div className="p-4 rounded-lg bg-red-100">
+            <h3 className="font-bold mb-2">Hazardous Items</h3>
+            <ul className="list-disc pl-4">
+              {detectedItems.hazardous.length > 0 
+                ? detectedItems.hazardous.map((item, idx) => (
+                    <li key={idx} className="text-sm">{item}</li>
+                  ))
+                : <li>None detected</li>}
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Sidebar */}
+      <div className="w-1/4 p-6 bg-gray-50 min-h-screen">
+        <h2 className="text-xl font-bold mb-4">Detection Console</h2>
+        
+        {/* Current Score */}
+        <div className={`mb-6 p-4 rounded-lg ${getScoreColor(cleanlinessScore)}`}>
+          <h3 className="text-lg font-bold text-center">Cleanliness Score</h3>
+          <p className="text-3xl font-bold text-center">{cleanlinessScore.toFixed(1)}</p>
+          <p className="text-center mt-2">{getScoreMessage(cleanlinessScore)}</p>
+        </div>
+
+        {/* Score History */}
+        <div className="score-history">
+          <h3 className="text-lg font-bold mb-2">Score History</h3>
+          {scoreHistory.map((entry, idx) => (
+            <div key={idx} className="mb-2 p-2 bg-white rounded shadow-sm">
+              <p className="text-sm text-gray-600">{entry.timestamp}</p>
+              <p className="font-bold">Score: {entry.score.toFixed(1)}</p>
+              <p className="text-xs">
+                R: {entry.counts.recyclable} | 
+                NR: {entry.counts.non_recyclable} | 
+                H: {entry.counts.hazardous}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
 export default CameraDetail;
-
-// 3: {
-//   image: 'https://plus.unsplash.com/premium_photo-1663013360223-019784f42500?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8Z2FyYmFnZSUyMHBvbHV0ZWQlMjByb2Fkc3xlbnwwfHwwfHx8MA%3D%3D',
-//   timestamp: '2024-11-05 11:00 AM',
-//   cleanlinessPercentage: '85%',
-//   location: 'Zone 3 - East Wing',
-// },
-// 4: {
-//   image: 'https://images.unsplash.com/photo-1495556650867-99590cea3657?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTR8fGdhcmJhZ2UlMjBwb2x1dGVkJTIwcm9hZHN8ZW58MHx8MHx8fDA%3D',
-//   timestamp: '2024-11-05 11:15 AM',
-//   cleanlinessPercentage: '90%',
-//   location: 'Zone 4 - West Wing',
-// },
-// 5: {
-//   image: 'https://media.istockphoto.com/id/908521560/photo/take-away-fast-food-box-on-pavement.webp?a=1&b=1&s=612x612&w=0&k=20&c=t2e3XLez8yL9L6PVWpAVwMmWWMXzTbHvw7b8B27em3o=',
-//   timestamp: '2024-11-05 11:30 AM',
-//   cleanlinessPercentage: '80%',
-//   location: 'Zone 5 - Central Wing',
-// },
-// 6: {
-//   image: 'https://media.istockphoto.com/id/1489051648/photo/open-garbage-dust-bin-liter-with-plastic-begs-and-waste-items-at-day-from-different-angle.webp?a=1&b=1&s=612x612&w=0&k=20&c=-NTxJIaQrIjK4-WwxYbh6r2a7W2DPUQeQy0yCf_wnYQ=',
-//   timestamp: '2024-11-05 11:45 AM',
-//   cleanlinessPercentage: '70%',
-//   location: 'Zone 6 - Basement',
-// },
