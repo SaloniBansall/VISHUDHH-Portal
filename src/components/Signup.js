@@ -154,11 +154,11 @@ const SignupPage = () => {
   );
 };
 
-<<<<<<< HEAD
+// <<<<<<< HEAD
 export default SignupPage;
 
 
 
-=======
-export default SignupPage;
->>>>>>> 71ce0400f25f87cc5ef4cfe6e427126dd8670bf2
+// =======
+// export default SignupPage;
+// >>>>>>> 71ce0400f25f87cc5ef4cfe6e427126dd8670bf2
