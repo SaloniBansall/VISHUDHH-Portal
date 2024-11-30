@@ -12,13 +12,13 @@ router.post('/send', async (req, res) => {
             port: 587,
             secure: false,
             auth: {
-                user: 'vishudhportal@email.com',
-                pass: 'auvcsrtqccelyfzy',
+                user: 'ankushinstagram57@gmail.com',
+                pass: 'ufrhekotujgvgzlf',
             },
         });
 
         const mailOptions = {
-            from: 'vishudhportal@email.com',
+            from: 'ankushinstagram57@gmail.com',
             to: recipientEmail,
             subject: `Report for ${place}`,
             text: `Place ID: ${id}\n\nMessage:\n${body}`,

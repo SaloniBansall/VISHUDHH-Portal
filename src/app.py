@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 from ultralytics import YOLO
 import numpy as np
 import cv2

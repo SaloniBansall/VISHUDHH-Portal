@@ -215,7 +215,7 @@ const StateDashboard = () => {
           style={{ boxShadow: '0 4px 10px rgba(0, 0, 0, 0.8)' }}
         >
           <div className={`p-4 rounded-lg mb-6 ${darkMode ? 'bg-gray-700' : 'bg-blue-100'}`}>
-            <h2 className="text-xl font-semibold mb-4">District Dashboard</h2>
+            <h2 className="text-xl font-semibold mb-4">State Dashboard</h2>
             <div className="flex space-x-8">
               <div className="flex flex-col space-y-6 w-1/3">
                 <div className="w-24 mx-auto circular">
