@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { User, Lock, AlertCircle } from 'lucide-react';
+import ReCAPTCHA from "react-google-recaptcha";
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -151,3 +152,5 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
+
