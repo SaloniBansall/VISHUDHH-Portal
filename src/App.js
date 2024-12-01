@@ -5,7 +5,7 @@ import AdminDashboard from './components/AdminDashboard';
 import StateDashboard from './components/StateDashboard';
 import DistrictDashboard from './components/DistrictDashboard';
 import CameraDetail from './components/CameraDetail';
-import MainPage from './components/MainPage';
+import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import Signup from './components/Signup';
 
@@ -14,7 +14,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<MainPage />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/admin-dashboard" element={<AdminDashboard />} />
