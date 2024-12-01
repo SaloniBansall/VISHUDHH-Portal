@@ -13,7 +13,7 @@ router.post('/send', async (req, res) => {
             secure: false,
             auth: {
                 user: 'ankushinstagram57@gmail.com',
-                pass: '',
+                pass: 'ufrhekotujgvgzlf',
             },
         });
 
